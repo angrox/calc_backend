@@ -1,66 +1,48 @@
-var express = require('express');
-var app = express();
-var morgan = require('morgan');
+require('dotenv-extended').load();
+
+const http = require('http');
+const express = require('express');
+const morgan = require('morgan');
+const swaggerize = require('swaggerize-express');
+const swaggerUi = require('swaggerize-ui');
+const path = require('path');
+const bodyParser = require('body-parser');
 
 var config = require('./config');
+var port = process.env.PORT || 3001;
 
-if (config.insights){ 
+var app = express();
+var server = http.createServer(app);
+app.use(bodyParser.json());
+
+if (config.instrumentationKey){ 
     var appInsights = require('applicationinsights');   
     appInsights.setup(config.instrumentationKey).setAutoCollectRequests(true).start();
 }
 
-var port = process.env.PORT || 3001;
-
 // add logging middleware
 app.use(morgan('dev'));
 
-// Routes
-app.get('/ping', function(req, res) {
-    console.log('received ping');
-    res.send('Pong');
+app.get('/', function (req, res) {
+    res.send('Hello World!');
 });
 
-app.post('/api/square', function(req, res) {
-    console.log("received client request:");
-    console.log(req.headers);
-    if (config.insights){ 
-        var startDate = new Date();
-        insightsClient.trackEvent("square-server-call", { value: req.headers.number });
-    }
-    var resultValue = 0;
-    try{
-        var number = parseInt(req.headers.number);
-        resultValue = number * number;
-    }catch(e){
-        console.log(e);
-        if (config.insights){ 
-            insightsClient.trackException(e);
-        }
-        resultValue = 0;
-    }
-    if (config.insights){ 
-        var endDate = new Date();
-        var duration = endDate - startDate;
-        insightsClient.trackEvent("calculation-server-call", { value: resultValue });
-        insightsClient.trackMetric("calculation-call-duration", duration);
-    }
-    console.log(resultValue);
-    res.send(resultValue.toString());
-});
+app.use('/docs', swaggerUi({
+   docs: '/api/swagger'  
+}));
 
-app.post('/api/dummy', function(req, res) {
-    console.log("received dummy request:");
-    console.log(req.headers)
-    if (config.insights){ 
-        insightsClient.trackEvent("dummy-data-call");
-    }
-    res.send('42');
-});
+// using https://www.json2yaml.com/
+app.use(swaggerize({
+     api: path.resolve('./config/api.json'),
+     handlers: path.resolve('./handlers'),
+     docspath: '/swagger'
+}));
 
 // Listen
-if (config.insights){ 
-    var insightsClient = appInsights.getClient(config.instrumentationKey);
-    insightsClient.trackEvent('app-initializing');
-}
-app.listen(port);
-console.log('Listening on localhost:'+ port);
+server.listen(port, function () { 
+    console.log('Listening on localhost:'+ port);
+    if (config.instrumentationKey){ 
+        var insightsClient = appInsights.getClient(config.instrumentationKey);
+        insightsClient.trackEvent('app-initializing');
+    }
+});

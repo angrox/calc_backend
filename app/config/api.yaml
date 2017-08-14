@@ -1,0 +1,66 @@
+---
+swagger: '2.0'
+info:
+  version: v1
+  title: Calculator API
+  description: A simple calculator api using Node.js
+basePath: "/api"
+paths:
+  "/ping":
+    get:
+      tags:
+      - Status
+      operationId: ping
+      consumes: []
+      produces:
+      - application/json
+      - text/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            "$ref": "#/definitions/status"
+        '500':
+          description: Service unavailable
+      deprecated: false
+  "/square/{number}":
+    post:
+      tags:
+      - Calculation
+      operationId: square
+      consumes: []
+      produces:
+      - application/json
+      - text/json
+      parameters:
+      - name: number
+        in: path
+        required: true
+        type: integer
+        format: int32
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            "$ref": "#/definitions/calculationresult"
+        '400':
+          description: Invalid number supplied
+      deprecated: false
+definitions:
+  status:
+    type: object
+    properties:
+      value:
+        type: string
+      timestamp:
+        format: date-time
+        type: string
+  calculationresult:
+    type: object
+    properties:
+      value:
+        format: int32
+        type: integer
+      timestamp:
+        format: date-time
+        type: string
